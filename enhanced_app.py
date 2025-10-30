@@ -1,5 +1,4 @@
-# AI Document Intelligence Assistant - FastAPI Backend
-
+# AI Document Intelligence Assistant - FastAPI Backend with PDF Support
 
 from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException
 from fastapi.templating import Jinja2Templates
@@ -14,6 +13,8 @@ import os
 import logging
 from pathlib import Path
 from typing import Optional
+import PyPDF2
+from pdf2image import convert_from_bytes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +37,6 @@ if not GROQ_API_KEY:
 # Store conversation sessions
 conversation_sessions = {}
 
-# System prompts for document analysis
 DOCUMENT_ANALYSIS_PROMPT = """You are DocuMind AI, an advanced document intelligence assistant specializing in comprehensive document analysis.
 
 Your capabilities include:
@@ -83,6 +83,39 @@ FOLLOWUP_PROMPT = """You are DocuMind AI in a follow-up conversation about a pre
 
 Respond to: {query}"""
 
+
+def convert_pdf_to_images(pdf_content: bytes) -> list:
+    """Convert PDF pages to images"""
+    try:
+        images = convert_from_bytes(pdf_content, dpi=200, fmt='jpeg')
+        logger.info(f"Converted PDF to {len(images)} images")
+        return images
+    except Exception as e:
+        logger.error(f"Error converting PDF to images: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"PDF conversion failed: {str(e)}")
+
+
+def extract_text_from_pdf(pdf_content: bytes) -> str:
+    """Extract text from PDF for context"""
+    try:
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        logger.info(f"Extracted {len(text)} characters from PDF")
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {str(e)}")
+        return ""
+
+
+def encode_image_to_base64(image: Image.Image) -> str:
+    """Convert PIL Image to base64 string"""
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
 def call_groq_api(messages: list, max_tokens: int = 2000) -> requests.Response:
     """Call Groq API with Llama 4 Maverick model"""
     try:
@@ -107,10 +140,12 @@ def call_groq_api(messages: list, max_tokens: int = 2000) -> requests.Response:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"API request failed: {str(e)}")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     """Serve the main application page"""
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.post("/analyze_document")
 async def analyze_document(
@@ -118,28 +153,52 @@ async def analyze_document(
     query: str = Form(...),
     session_id: str = Form(...)
 ):
-    """Analyze uploaded document and answer user's query"""
+    """Analyze uploaded document (PDF or image) and answer user's query"""
     try:
-        # Read and validate document
+        # Read document
         doc_content = await document.read()
         if not doc_content:
             raise HTTPException(status_code=400, detail="Empty file uploaded")
         
-        # Encode document image
-        encoded_doc = base64.b64encode(doc_content).decode("utf-8")
+        file_extension = Path(document.filename).suffix.lower()
+        encoded_docs = []
+        extracted_text = ""
         
-        # Verify image format
-        try:
-            img = Image.open(io.BytesIO(doc_content))
-            img.verify()
-        except Exception as e:
-            logger.error(f"Invalid image format: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Invalid file format: {str(e)}")
+        # Handle PDF
+        if file_extension == ".pdf":
+            logger.info("Processing PDF file")
+            
+            # Extract text for context
+            extracted_text = extract_text_from_pdf(doc_content)
+            
+            # Convert PDF to images
+            images = convert_pdf_to_images(doc_content)
+            
+            # Encode each image
+            for img in images[:3]:  # Limit to first 3 pages for cost/performance
+                encoded_docs.append(encode_image_to_base64(img))
+            
+            logger.info(f"Encoded {len(encoded_docs)} PDF pages as images")
         
-        # Prepare analysis prompt
-        enhanced_query = DOCUMENT_ANALYSIS_PROMPT.format(query=query)
+        # Handle image files (JPG, PNG, etc.)
+        else:
+            logger.info(f"Processing image file: {file_extension}")
+            try:
+                img = Image.open(io.BytesIO(doc_content))
+                img.verify()
+                img = Image.open(io.BytesIO(doc_content))  # Reopen after verify
+                encoded_docs.append(encode_image_to_base64(img))
+            except Exception as e:
+                logger.error(f"Invalid image format: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Invalid file format: {str(e)}")
         
-        # Initialize conversation
+        # Prepare enhanced query with extracted text context
+        if extracted_text:
+            enhanced_query = f"Extracted PDF text context:\n{extracted_text[:2000]}...\n\n{DOCUMENT_ANALYSIS_PROMPT.format(query=query)}"
+        else:
+            enhanced_query = DOCUMENT_ANALYSIS_PROMPT.format(query=query)
+        
+        # Build messages with all document images
         messages = [
             {
                 "role": "system",
@@ -148,11 +207,17 @@ async def analyze_document(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": enhanced_query},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_doc}"}}
+                    {"type": "text", "text": enhanced_query}
                 ]
             }
         ]
+        
+        # Add images to the user message
+        for encoded_doc in encoded_docs:
+            messages[1]["content"].append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{encoded_doc}"}
+            })
         
         logger.info(f"Analyzing document for session: {session_id}")
         response = call_groq_api(messages)
@@ -171,8 +236,12 @@ async def analyze_document(
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Document analysis request: {query}"},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_doc}"}}
+                            {"type": "text", "text": f"Document analysis request: {query}"}
+                        ] + [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{doc}"}
+                            } for doc in encoded_docs
                         ]
                     },
                     {
@@ -180,13 +249,15 @@ async def analyze_document(
                         "content": assistant_message
                     }
                 ],
-                "document": encoded_doc
+                "documents": encoded_docs,
+                "extracted_text": extracted_text
             }
             
             logger.info("Document analysis completed successfully")
             return JSONResponse(status_code=200, content={
                 "response": assistant_message,
-                "status": "success"
+                "status": "success",
+                "pages_processed": len(encoded_docs)
             })
         else:
             logger.error(f"API error: {response.status_code} - {response.text}")
@@ -199,6 +270,7 @@ async def analyze_document(
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
+
 @app.post("/continue_conversation")
 async def continue_conversation(
     query: str = Form(...),
@@ -206,7 +278,6 @@ async def continue_conversation(
 ):
     """Handle follow-up questions about the document"""
     try:
-        # Check session exists
         if session_id not in conversation_sessions:
             raise HTTPException(status_code=404, detail="Session not found. Please upload a document first.")
         
@@ -247,6 +318,7 @@ async def continue_conversation(
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
+
 @app.post("/clear_session")
 async def clear_session(session_id: str = Form(...)):
     """Clear conversation history"""
@@ -254,14 +326,16 @@ async def clear_session(session_id: str = Form(...)):
         del conversation_sessions[session_id]
     return {"status": "success", "message": "Session cleared"}
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
         "service": "DocuMind AI - Document Intelligence Assistant",
-        "version": "1.0.0"
+        "version": "1.1.0"
     }
+
 
 @app.get("/stats")
 async def get_stats():
@@ -271,7 +345,8 @@ async def get_stats():
         "status": "operational"
     }
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
-
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
