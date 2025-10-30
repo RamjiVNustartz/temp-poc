@@ -23,12 +23,14 @@ def process_image(image_path, query):
         with open(image_path, "rb") as image_file:
             image_content = image_file.read()
             encoded_image = base64.b64encode(image_content).decode("utf-8")
+        
         try:
             img = Image.open(io.BytesIO(image_content))
             img.verify()
         except Exception as e:
             logger.error(f"Invalid image format: {str(e)}")
             return {"error": f"Invalid image format: {str(e)}"}
+        
         messages = [
             {
                 "role": "user",
@@ -38,13 +40,16 @@ def process_image(image_path, query):
                 ]
             }
         ]
+        
         def make_api_request(model):
             response = requests.post(
                 GROQ_API_URL, 
                 json={
                     "model": model, 
                     "messages": messages, 
-                    "max_tokens": 1000
+                    "max_tokens": 1000,
+                    "temperature": 1,
+                    "top_p": 1
                 },
                 headers = {
                     "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -54,11 +59,12 @@ def process_image(image_path, query):
             )
             return response
         
-        llama_11b_response = make_api_request("llama-3.2-11b-vision-preview")
-        llama_90b_response = make_api_request("llama-3.2-90b-vision-preview")
+        # NEW: Updated to Llama 4 vision models
+        llama_scout_response = make_api_request("meta-llama/llama-4-scout-17b-16e-instruct")
+        llama_maverick_response = make_api_request("meta-llama/llama-4-maverick-17b-128e-instruct")
 
         responses = {}
-        for model, response in [("llama11b", llama_11b_response), ("llama90b", llama_90b_response)]:
+        for model, response in [("llama-scout", llama_scout_response), ("llama-maverick", llama_maverick_response)]:
             if response.status_code == 200:
                 result = response.json()
                 answer = result["choices"][0]["message"]["content"]

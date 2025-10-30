@@ -1,154 +1,755 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analyze Image Application</title>
+    <title>DocuMind AI - Intelligent Document Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-300 font-sans">
-
-    <div class="container mx-auto p-6">
-        <div class="flex items-center justify-center mb-12">
-            <i class="fas fa-camera text-6xl text-gray-400 mr-4"></i>
-            <h1 class="text-4xl font-bold text-purple-300 shadow-md">AI-DOCTOR (MEDICAL CHATBOT) ANALYZE IMAGE APPLICATION</h1>
-        </div>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
         
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --gray: #64748b;
+            --light: #f1f5f9;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles */
+        .particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float-particle 8s infinite ease-in-out;
+        }
+        
+        @keyframes float-particle {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translate(50px, -50px) scale(1.5);
+                opacity: 0.3;
+            }
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
+            backdrop-filter: blur(20px);
+        }
+        
+        .doc-upload-zone {
+            border: 3px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .doc-upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .doc-upload-zone:hover::before {
+            width: 500px;
+            height: 500px;
+        }
+        
+        .doc-upload-zone:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px);
+        }
+        
+        .chat-message {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            animation: slideUp 0.4s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message-bubble {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 1.25rem;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        
+        .message-bubble.user {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(139, 92, 246, 0.8) 100%);
+            margin-left: auto;
+        }
+        
+        .message-bubble.assistant {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .avatar.user {
+            background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+        }
+        
+        .avatar.assistant {
+            background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+        }
+        
+        .gradient-button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gradient-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .gradient-button:hover::before {
+            left: 100%;
+        }
+        
+        .gradient-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(99, 102, 241, 0.6);
+        }
+        
+        .gradient-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1rem;
+            border-radius: 16px;
+            width: 100%;
+            resize: none;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-container {
+            height: 550px;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+        
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        
+        .tag-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #d1fae5;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        
+        .tag-info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #dbeafe;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        
+        .tag-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fef3c7;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .title-gradient {
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .title-gradient {
+                font-size: 2rem;
+            }
             
-            <!-- Upload Image Card -->
-            <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
-                <h2 class="text-xl font-semibold text-purple-400 mb-4">📤 Upload Image</h2>
-                
-                <button id="upload-btn" class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-md transition-all">
-                    📸 Click to Upload
-                </button>
-                
-                <input type="file" id="image-upload" accept="image/*" class="hidden" />
-                
-                <div id="image-container" class="hidden mt-4">
-                    <img id="display-image" src="" alt="Uploaded image" class="w-full rounded-lg shadow-lg" />
+            .message-bubble {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Animated particles -->
+    <script>
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            document.body.appendChild(particle);
+        }
+    </script>
+    
+    <div class="max-w-7xl mx-auto p-4 md:p-8 relative z-10">
+        
+        <!-- Hero Header -->
+        <div class="glass-card header-gradient p-8 mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-20 h-20 bg-white bg-opacity-20 rounded-3xl flex items-center justify-center shadow-xl">
+                        <i class="fas fa-brain text-white text-4xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="title-gradient">DocuMind AI</h1>
+                        <p class="text-white text-lg mt-2 font-medium">Intelligent Document Analysis & Insights</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <span class="tag tag-success">
+                        <i class="fas fa-shield-alt"></i> Secure
+                    </span>
+                    <span class="tag tag-info">
+                        <i class="fas fa-bolt"></i> AI-Powered
+                    </span>
+                    <span class="tag tag-warning">
+                        <i class="fas fa-file-pdf"></i> Multi-Format
+                    </span>
                 </div>
             </div>
+        </div>
 
-            <!-- Ask Question Card -->
-            <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
-                <h2 class="text-xl font-semibold text-blue-400 mb-4">💬 Ask Question</h2>
-                <textarea id="query-input" rows="4" placeholder="Enter your question about the image"
-                    class="w-full p-3 bg-gray-800 text-gray-300 rounded-lg shadow"></textarea>
-                <button id="submit-query" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg mt-3 transition-all">
-                    🚀 Submit Query
+        <!-- Features Grid -->
+        <div id="features-section" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="feature-card">
+                <div class="text-4xl mb-3">📄</div>
+                <h3 class="text-white font-bold text-lg mb-2">Extract Text</h3>
+                <p class="text-white text-sm opacity-80">OCR & text extraction from any document</p>
+            </div>
+            <div class="feature-card">
+                <div class="text-4xl mb-3">📊</div>
+                <h3 class="text-white font-bold text-lg mb-2">Summarize</h3>
+                <p class="text-white text-sm opacity-80">AI-powered intelligent summaries</p>
+            </div>
+            <div class="feature-card">
+                <div class="text-4xl mb-3">🔍</div>
+                <h3 class="text-white font-bold text-lg mb-2">Analyze</h3>
+                <p class="text-white text-sm opacity-80">Deep insights & key findings</p>
+            </div>
+            <div class="feature-card">
+                <div class="text-4xl mb-3">💬</div>
+                <h3 class="text-white font-bold text-lg mb-2">Ask Questions</h3>
+                <p class="text-white text-sm opacity-80">Interactive Q&A about documents</p>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload-section" class="glass-card p-8">
+            <h2 class="text-white text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-cloud-upload-alt"></i>
+                Upload Your Document
+            </h2>
+            
+            <div id="upload-zone" class="doc-upload-zone relative z-0">
+                <input type="file" id="file-input" accept="image/*,.pdf" class="hidden" />
+                <div class="relative z-10">
+                    <div class="text-7xl mb-4">📎</div>
+                    <h3 class="text-white text-2xl font-bold mb-2">Drop your document here</h3>
+                    <p class="text-white opacity-75 mb-6">or click to browse</p>
+                    <button id="browse-btn" class="gradient-button">
+                        <i class="fas fa-folder-open mr-2"></i> Browse Files
+                    </button>
+                    <p class="text-white opacity-60 text-sm mt-4">Supports: PDF, JPG, PNG, JPEG</p>
+                </div>
+            </div>
+            
+            <div id="preview-container" class="hidden mt-8">
+                <div class="relative">
+                    <img id="preview-image" src="" alt="Document preview" class="w-full rounded-2xl shadow-2xl" style="max-height: 400px; object-fit: contain;" />
+                    <button id="remove-doc" class="absolute top-4 right-4 w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-all flex items-center justify-center">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="stat-card">
+                        <div class="stat-number" id="file-size">0 KB</div>
+                        <p class="text-white opacity-75 mt-2">File Size</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="file-type">-</div>
+                        <p class="text-white opacity-75 mt-2">Type</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">
+                            <i class="fas fa-check-circle text-green-400"></i>
+                        </div>
+                        <p class="text-white opacity-75 mt-2">Ready</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <label class="block text-white font-semibold mb-3 text-lg">What would you like to know?</label>
+                    <textarea id="initial-query" rows="3" 
+                        placeholder="e.g., 'Summarize this document', 'Extract key points', 'What is this document about?'"
+                        class="input-field"></textarea>
+                </div>
+                
+                <button id="analyze-btn" class="w-full gradient-button mt-6 py-4 text-xl">
+                    <i class="fas fa-magic mr-2"></i> Analyze Document
                 </button>
             </div>
+        </div>
 
+        <!-- Chat Section -->
+        <div id="chat-section" class="hidden glass-card mt-8">
+            <div class="p-6 border-b border-white border-opacity-20 flex items-center justify-between">
+                <h2 class="text-white text-2xl font-bold flex items-center gap-3">
+                    <i class="fas fa-comments"></i>
+                    Document Assistant
+                </h2>
+                <button id="new-doc-btn" class="px-5 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-xl text-white font-semibold transition-all">
+                    <i class="fas fa-plus mr-2"></i> New Document
+                </button>
+            </div>
+            
+            <div id="chat-container" class="chat-container">
+                <!-- Messages will appear here -->
+            </div>
+            
+            <div class="p-6 border-t border-white border-opacity-20">
+                <div class="flex gap-4">
+                    <textarea id="chat-input" rows="1" 
+                        placeholder="Ask a follow-up question..."
+                        class="input-field flex-1"></textarea>
+                    <button id="send-btn" class="gradient-button">
+                        <i class="fas fa-paper-plane text-xl"></i>
+                    </button>
+                </div>
+            </div>
         </div>
         
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            <!-- Llama Response -->
-            <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
-                <h2 class="text-xl font-semibold text-green-400">🤖 Llama-3.2-11b-vision Response</h2>
-                <div id="response-container-llama11b" class="hidden mt-4 bg-gray-800 p-4 rounded text-gray-300"></div>
-            </div>
-            
-            <!-- Llava Response -->
-            <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
-                <h2 class="text-xl font-semibold text-green-400">🤖 Llama-3.2-90b-vision Response</h2>
-                <div id="response-container-llama90b" class="hidden mt-4 bg-gray-800 p-4 rounded text-gray-300"></div>
-            </div>
-
-        </div>
-
-        <!-- Error Message -->
-        <div id="error-container" class="hidden mt-8 p-4 bg-red-500 text-white rounded">
-            <p id="error-text"></p>
-        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const uploadBtn = document.getElementById('upload-btn');
-            const imageUpload = document.getElementById('image-upload');
-            const displayImage = document.getElementById('display-image');
-            const imageContainer = document.getElementById('image-container');
-            const queryInput = document.getElementById('query-input');
-            const submitQuery = document.getElementById('submit-query');
-            const responseLlama = document.getElementById('response-container-llama11b');
-            const responseLlava = document.getElementById('response-container-llama90b');
-            const errorContainer = document.getElementById('error-container');
-            const errorText = document.getElementById('error-text');
-
-            // Click to Upload button trigger
-            uploadBtn.addEventListener('click', () => {
-                imageUpload.click();
-            });
-
-            // Display uploaded image
-            imageUpload.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        displayImage.src = e.target.result;
-                        imageContainer.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            // Submit Query
-            submitQuery.addEventListener('click', async () => {
-                const image = imageUpload.files[0];
-                const query = queryInput.value;
-
-                if (!image || !query) {
-                    showError('⚠️ Please upload an image and enter a query.');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('image', image);
-                formData.append('query', query);
-
-                try {
-                    submitQuery.disabled = true;
-                    submitQuery.textContent = 'Processing... ⏳';
-
-                    const response = await fetch('/upload_and_query', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.detail || 'An error occurred while processing your request.');
-                    }
-
-                    responseLlama.innerHTML = marked.parse(result.llama);
-                    responseLlama.classList.remove('hidden');
-                    responseLlava.innerHTML = marked.parse(result.llava);
-                    responseLlava.classList.remove('hidden');
-                    errorContainer.classList.add('hidden');
-                } catch (error) {
-                    console.error('Error:', error);
-                    showError(error.message);
-                } finally {
-                    submitQuery.disabled = false;
-                    submitQuery.textContent = '🚀 Submit Query';
-                }
-            });
-
-            function showError(message) {
-                errorText.textContent = message;
-                errorContainer.classList.remove('hidden');
-                responseLlama.classList.add('hidden');
-                responseLlava.classList.add('hidden');
+        marked.setOptions({ breaks: true, gfm: true });
+        
+        const sessionId = 'doc_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // DOM Elements
+        const uploadSection = document.getElementById('upload-section');
+        const chatSection = document.getElementById('chat-section');
+        const featuresSection = document.getElementById('features-section');
+        const uploadZone = document.getElementById('upload-zone');
+        const browseBtn = document.getElementById('browse-btn');
+        const fileInput = document.getElementById('file-input');
+        const previewImage = document.getElementById('preview-image');
+        const previewContainer = document.getElementById('preview-container');
+        const removeDocBtn = document.getElementById('remove-doc');
+        const initialQuery = document.getElementById('initial-query');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const newDocBtn = document.getElementById('new-doc-btn');
+        const fileSizeEl = document.getElementById('file-size');
+        const fileTypeEl = document.getElementById('file-type');
+        
+        let uploadedFile = null;
+        
+        // Upload handlers
+        browseBtn.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target === uploadZone || e.target.closest('#upload-zone') === uploadZone) {
+                fileInput.click();
             }
         });
-    </script>
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            const file = e.dataTransfer.files;
+            if (file) handleFileUpload(file);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file instanceof Blob) {  // Validate it's a Blob/File
+                handleFileUpload(file);
+            } else {
+                console.error('Invalid file selected');
+                alert('Please select a valid file');
+            }
+        });
 
+        function handleFileUpload(file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {
+                alert('Invalid file type. Please upload an image or PDF.');
+                return;
+            }
+            
+            uploadedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                uploadZone.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                
+                // Update stats
+                fileSizeEl.textContent = (file.size / 1024).toFixed(1) + ' KB';
+                fileTypeEl.textContent = file.type.includes('pdf') ? 'PDF' : 'Image';
+            };
+            
+            reader.onerror = (error) => {
+                console.error('FileReader error:', error);
+                alert('Error reading file. Please try again.');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        
+        removeDocBtn.addEventListener('click', () => {
+            uploadedFile = null;
+            previewImage.src = '';
+            previewContainer.classList.add('hidden');
+            uploadZone.classList.remove('hidden');
+            fileInput.value = '';
+        });
+        
+        // Analyze document
+        analyzeBtn.addEventListener('click', async () => {
+            if (!uploadedFile || !initialQuery.value.trim()) {
+                alert('Please upload a document and enter your question.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('document', uploadedFile);
+            formData.append('query', initialQuery.value);
+            formData.append('session_id', sessionId);
+            
+            try {
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+                
+                const response = await fetch('/analyze_document', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Analysis failed');
+                }
+                
+                // Switch to chat
+                uploadSection.classList.add('hidden');
+                featuresSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+                
+                addMessage('user', initialQuery.value);
+                addMessage('assistant', result.response);
+                
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-magic mr-2"></i> Analyze Document';
+            }
+        });
+        
+        // Send message
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        async function sendMessage() {
+            const query = chatInput.value.trim();
+            if (!query) return;
+            
+            chatInput.value = '';
+            addMessage('user', query);
+            
+            const formData = new FormData();
+            formData.append('query', query);
+            formData.append('session_id', sessionId);
+            
+            try {
+                sendBtn.disabled = true;
+                addTypingIndicator();
+                
+                const response = await fetch('/continue_conversation', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                removeTypingIndicator();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Processing error');
+                }
+                
+                addMessage('assistant', result.response);
+                
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('assistant', '⚠️ Error: ' + error.message);
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+        
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${role}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `avatar ${role}`;
+            avatar.innerHTML = role === 'user' 
+                ? '<i class="fas fa-user text-white"></i>' 
+                : '<i class="fas fa-robot text-white"></i>';
+            
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble ${role}`;
+            bubble.innerHTML = '<div class="text-white">' + marked.parse(content) + '</div>';
+            
+            if (role === 'user') {
+                messageDiv.appendChild(bubble);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(bubble);
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function addTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.id = 'typing-indicator';
+            indicator.className = 'chat-message assistant';
+            indicator.innerHTML = `
+                <div class="avatar assistant">
+                    <i class="fas fa-robot text-white"></i>
+                </div>
+                <div class="message-bubble assistant">
+                    <div class="text-white pulse">
+                        <i class="fas fa-ellipsis-h"></i> Thinking...
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(indicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+        
+        // New document
+        newDocBtn.addEventListener('click', () => {
+            location.reload();
+        });
+    </script>
+    
 </body>
 </html>
